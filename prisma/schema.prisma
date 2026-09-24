@@ -1,0 +1,38 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Question {
+  id              String   @id @default(cuid())
+  question        String
+  options         String   // JSON stringified array of 4 options
+  correctAnswer   Int
+  category        String   // mountains, valleys, plateaus, plains, rivers, land-life, human-activities
+  difficulty      String   // easy, medium, hard
+  explanation     String
+  image           String?
+  visualType      String?  // none, image, terrain, map
+  terrainFocus    String?  // mountains, valley, plateau, plains, river, settlement
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model RaceHistory {
+  id              String   @id @default(cuid())
+  winnerTeam      String
+  blueScore       Int
+  orangeScore     Int
+  blueCheckpoint  Int
+  orangeCheckpoint Int
+  durationSeconds Int
+  createdAt       DateTime @default(now())
+}
