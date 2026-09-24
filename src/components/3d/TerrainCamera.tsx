@@ -8,18 +8,45 @@ interface TerrainCameraProps {
   activeZone: LandformZone;
   hintZone: LandformZone | null;
   allowOrbit: boolean;
+  cameraMode?: 'overview' | 'chase';
+  leadPosition?: THREE.Vector3;
+  leadTangent?: THREE.Vector3;
 }
 
 export const TerrainCamera: React.FC<TerrainCameraProps> = ({
   activeZone,
   hintZone,
-  allowOrbit
+  allowOrbit,
+  cameraMode = 'overview',
+  leadPosition,
+  leadTangent
 }) => {
   const { camera } = useThree();
   const targetLookAt = useRef(new THREE.Vector3(0, 1.5, 0));
   const currentLookAt = useRef(new THREE.Vector3(0, 1.5, 0));
 
   useFrame((_, delta) => {
+    // If Chase Cam is active and leadPosition is available, glide behind vehicle
+    if (cameraMode === 'chase' && leadPosition && leadTangent && !hintZone) {
+      const tangent = leadTangent.clone().normalize();
+      const targetCamPos = leadPosition
+        .clone()
+        .sub(tangent.clone().multiplyScalar(3.2))
+        .add(new THREE.Vector3(0, 2.0, 0));
+
+      const targetCenter = leadPosition
+        .clone()
+        .add(tangent.clone().multiplyScalar(2.0))
+        .add(new THREE.Vector3(0, 0.4, 0));
+
+      if (!allowOrbit) {
+        camera.position.lerp(targetCamPos, delta * 3.0);
+        currentLookAt.current.lerp(targetCenter, delta * 3.5);
+        camera.lookAt(currentLookAt.current);
+      }
+      return;
+    }
+
     // Determine target camera position and lookAt based on hint or active zone
     const zoneToFocus = hintZone || activeZone;
 

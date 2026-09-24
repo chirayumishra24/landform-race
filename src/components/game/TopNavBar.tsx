@@ -21,6 +21,8 @@ interface TopNavBarProps {
   onToggleFullscreen: () => void;
   viewMode: '3d' | 'map';
   onToggleViewMode: () => void;
+  cameraMode?: 'overview' | 'chase';
+  onToggleCameraMode?: () => void;
   onResetMatch: () => void;
   onOpenExplorer: () => void;
   onOpenTeacher: () => void;
@@ -68,6 +70,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   onToggleFullscreen,
   viewMode,
   onToggleViewMode,
+  cameraMode = 'overview',
+  onToggleCameraMode,
   onResetMatch,
   onOpenExplorer,
   onOpenTeacher,
@@ -100,10 +104,11 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         </div>
       </div>
 
-      {/* CENTER: Round Indicator (separate capsule) */}
-      <div className="flex items-center gap-6">
-        <div className="flex flex-col items-center bg-slate-50/80 px-5 py-1.5 rounded-full border border-slate-200/80 shadow-inner">
-          <span className="text-sm font-extrabold text-slate-700 tracking-wider uppercase">
+      {/* CENTER: Round Indicator + Lead Margin Badge + Timer */}
+      <div className="flex items-center gap-4">
+        {/* Round capsule */}
+        <div className="flex flex-col items-center bg-slate-50/80 px-4 py-1.5 rounded-full border border-slate-200/80 shadow-inner">
+          <span className="text-xs font-extrabold text-slate-700 tracking-wider uppercase">
             ROUND {Math.max(blueCheckpoint, orangeCheckpoint, 1)} / {totalRounds}
           </span>
           <div className="flex items-center gap-1 mt-0.5">
@@ -115,7 +120,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               return (
                 <div
                   key={i}
-                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
                     isFilled
                       ? isBlueLead
                         ? 'bg-sky-500 shadow-sm shadow-sky-400'
@@ -130,18 +135,38 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           </div>
         </div>
 
+        {/* Live Spectator Lead Delta Badge */}
+        <div className="hidden md:flex items-center">
+          {blueCheckpoint > orangeCheckpoint ? (
+            <div className="px-3 py-1 rounded-full bg-sky-100 text-sky-800 border border-sky-300 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
+              <span>Blue +{blueCheckpoint - orangeCheckpoint} Laps Lead</span>
+            </div>
+          ) : orangeCheckpoint > blueCheckpoint ? (
+            <div className="px-3 py-1 rounded-full bg-orange-100 text-orange-800 border border-orange-300 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
+              <span>Orange +{orangeCheckpoint - blueCheckpoint} Laps Lead</span>
+            </div>
+          ) : (
+            <div className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-slate-400" />
+              <span>Tied (Neck & Neck)</span>
+            </div>
+          )}
+        </div>
+
         {/* Timer (separate from round) */}
-        <div className="flex items-center gap-2.5">
-          <Clock className={`w-7 h-7 ${isFinalMinute ? 'text-red-500 animate-pulse' : 'text-sky-600'}`} />
+        <div className="flex items-center gap-2">
+          <Clock className={`w-6 h-6 ${isFinalMinute ? 'text-red-500 animate-pulse' : 'text-sky-600'}`} />
           <div className="flex flex-col items-start">
             <span
-              className={`text-3xl tracking-wider font-mono font-black leading-none ${
+              className={`text-2xl tracking-wider font-mono font-black leading-none ${
                 isFinalMinute ? 'text-red-600 animate-pulse' : 'text-slate-800'
               }`}
             >
               {timeFormatted}
             </span>
-            <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+            <span className="text-[9px] font-bold tracking-widest text-slate-500 uppercase">
               {isFinalMinute ? 'FINAL MINUTE' : 'TIME REMAINING'}
             </span>
           </div>
@@ -150,6 +175,21 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
       {/* RIGHT: Controls */}
       <div className="flex items-center gap-2 shrink-0">
+        {/* Camera Mode Toggle (Overview / Chase) */}
+        {viewMode === '3d' && onToggleCameraMode && (
+          <button
+            onClick={onToggleCameraMode}
+            title={cameraMode === 'chase' ? 'Switch to Overview Cam' : 'Switch to Chase Cam'}
+            className={`flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-extrabold border transition-all shadow-sm active:scale-95 ${
+              cameraMode === 'chase'
+                ? 'bg-amber-100 text-amber-900 border-amber-300 shadow-amber-200/50'
+                : 'clay-button-light hover:bg-slate-100 text-slate-700 border-slate-200'
+            }`}
+          >
+            <span>{cameraMode === 'chase' ? '🏎️ CHASE' : '🔭 OVERVIEW'}</span>
+          </button>
+        )}
+
         {/* 3D / Map View Toggle */}
         <button
           onClick={onToggleViewMode}

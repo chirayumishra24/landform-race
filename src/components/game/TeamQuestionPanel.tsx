@@ -104,13 +104,18 @@ export const TeamQuestionPanel: React.FC<TeamQuestionPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Streak Boost */}
-          {team.streak >= 2 && (
+          {/* Streak Boost / Nitro Rush */}
+          {team.streak >= 3 ? (
+            <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-red-500 text-white border border-amber-300 text-[10px] font-black shadow-md animate-pulse">
+              <Flame className="w-3.5 h-3.5 fill-white" />
+              <span>NITRO RUSH {team.streak}X</span>
+            </div>
+          ) : team.streak === 2 ? (
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-extrabold shadow-sm animate-pulse">
               <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
-              <span>{team.streak}X</span>
+              <span>2X SPEED</span>
             </div>
-          )}
+          ) : null}
           <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-black tracking-wide shadow-sm">
             <Wind className="w-3 h-3" />
             +¼ LAP / 90°
@@ -119,14 +124,14 @@ export const TeamQuestionPanel: React.FC<TeamQuestionPanelProps> = ({
       </div>
 
       {/* ─── QUESTION TEXT ─── */}
-      <div className="px-1 mb-3 flex-shrink-0">
+      <div className="px-1 mb-2.5 flex-shrink-0">
         <h3 className="font-extrabold text-slate-900 text-base leading-snug">
           {question.question}
         </h3>
       </div>
 
       {/* ─── 4 OPTIONS (A–D) ─── */}
-      <div className="space-y-2 mb-3 flex-1 min-h-0 overflow-y-auto">
+      <div className="space-y-2 mb-2.5 flex-1 min-h-0 max-h-[36vh] overflow-y-auto pr-1">
         {question.options.map((optText, idx) => {
           const isSelected = team.selectedOption === idx;
           const isEliminated = team.eliminatedOptions.includes(idx);
@@ -181,7 +186,7 @@ export const TeamQuestionPanel: React.FC<TeamQuestionPanelProps> = ({
               key={idx}
               disabled={disabled || hasSubmitted || isEliminated}
               onClick={() => onSelectOption(idx)}
-              className={`w-full py-2.5 px-3 rounded-xl border text-left flex items-center gap-3 transition-all duration-200 active:scale-[0.99] ${btnBg} ${btnBorder} ${btnText} ${extraClasses}`}
+              className={`w-full min-h-[48px] py-2.5 px-3.5 rounded-xl border text-left flex items-center gap-3 transition-all duration-200 active:scale-[0.99] ${btnBg} ${btnBorder} ${btnText} ${extraClasses}`}
             >
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 ${badgeBg}`}
@@ -234,7 +239,7 @@ export const TeamQuestionPanel: React.FC<TeamQuestionPanelProps> = ({
         <button
           disabled={disabled || team.hasSubmitted || team.fiftyFiftyRemaining <= 0}
           onClick={onUseFiftyFifty}
-          className={`flex-1 px-3 py-2 rounded-full text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all border ${
+          className={`flex-1 min-h-[42px] px-3 py-2 rounded-full text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all border ${
             team.fiftyFiftyRemaining > 0 && !team.hasSubmitted
               ? 'bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300 active:scale-95'
               : 'bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed'
@@ -251,7 +256,7 @@ export const TeamQuestionPanel: React.FC<TeamQuestionPanelProps> = ({
         <button
           disabled={disabled || team.hasSubmitted || team.landscapeHintsRemaining <= 0}
           onClick={onUseLandscapeHint}
-          className={`flex-1 px-3 py-2 rounded-full text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all border ${
+          className={`flex-1 min-h-[42px] px-3 py-2 rounded-full text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all border ${
             team.landscapeHintsRemaining > 0 && !team.hasSubmitted
               ? 'bg-sky-100 hover:bg-sky-200 text-sky-800 border-sky-300 active:scale-95'
               : 'bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed'

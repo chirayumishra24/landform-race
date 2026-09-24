@@ -57,6 +57,7 @@ export default function LandformRacersPage() {
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'3d' | 'map'>('3d');
+  const [cameraMode, setCameraMode] = useState<'overview' | 'chase'>('overview');
 
   // Modals & Panels
   const [showReview, setShowReview] = useState<boolean>(false);
@@ -287,16 +288,20 @@ export default function LandformRacersPage() {
 
     const isCorrect = blueTeam.selectedOption === currentQ.correctAnswer;
     const nextStreak = isCorrect ? blueTeam.streak + 1 : 0;
-    const isBoosting = nextStreak >= 3;
-    const nextScore = blueTeam.score + (isCorrect ? (isBoosting ? 250 : 100) : 0);
-    const nextCheckpoint = isCorrect ? Math.min(15, blueTeam.checkpoint + 1) : blueTeam.checkpoint;
+    const isNitroRush = nextStreak >= 3;
+    const isBoosting = nextStreak >= 2;
+    const advance = isCorrect ? (isNitroRush ? 2 : 1) : 0;
+    const nextScore = blueTeam.score + (isCorrect ? (isNitroRush ? 300 : isBoosting ? 200 : 100) : 0);
+    const nextCheckpoint = isCorrect ? Math.min(15, blueTeam.checkpoint + advance) : blueTeam.checkpoint;
     const nextZone = getZoneForCheckpoint(nextCheckpoint);
 
     // Audio trigger
     if (isCorrect) {
       sound.playCorrect();
-      setTimeout(() => sound.playDrive(), 300);
-      if (isBoosting) sound.playBoost();
+      setTimeout(() => sound.playDrive(), 250);
+      if (isNitroRush || isBoosting) sound.playBoost();
+      if (nextCheckpoint >= 15) sound.playFanfare();
+      else if (advance > 1 || nextZone !== blueTeam.currentZone) sound.playCheckpoint();
     } else {
       sound.playWrong();
     }
@@ -351,16 +356,20 @@ export default function LandformRacersPage() {
 
     const isCorrect = orangeTeam.selectedOption === currentQ.correctAnswer;
     const nextStreak = isCorrect ? orangeTeam.streak + 1 : 0;
-    const isBoosting = nextStreak >= 3;
-    const nextScore = orangeTeam.score + (isCorrect ? (isBoosting ? 250 : 100) : 0);
-    const nextCheckpoint = isCorrect ? Math.min(15, orangeTeam.checkpoint + 1) : orangeTeam.checkpoint;
+    const isNitroRush = nextStreak >= 3;
+    const isBoosting = nextStreak >= 2;
+    const advance = isCorrect ? (isNitroRush ? 2 : 1) : 0;
+    const nextScore = orangeTeam.score + (isCorrect ? (isNitroRush ? 300 : isBoosting ? 200 : 100) : 0);
+    const nextCheckpoint = isCorrect ? Math.min(15, orangeTeam.checkpoint + advance) : orangeTeam.checkpoint;
     const nextZone = getZoneForCheckpoint(nextCheckpoint);
 
     // Audio trigger
     if (isCorrect) {
       sound.playCorrect();
-      setTimeout(() => sound.playDrive(), 300);
-      if (isBoosting) sound.playBoost();
+      setTimeout(() => sound.playDrive(), 250);
+      if (isNitroRush || isBoosting) sound.playBoost();
+      if (nextCheckpoint >= 15) sound.playFanfare();
+      else if (advance > 1 || nextZone !== orangeTeam.currentZone) sound.playCheckpoint();
     } else {
       sound.playWrong();
     }
@@ -506,6 +515,8 @@ export default function LandformRacersPage() {
         onToggleFullscreen={toggleFullscreen}
         viewMode={viewMode}
         onToggleViewMode={() => setViewMode(viewMode === '3d' ? 'map' : '3d')}
+        cameraMode={cameraMode}
+        onToggleCameraMode={() => setCameraMode(prev => prev === 'overview' ? 'chase' : 'overview')}
         onResetMatch={startNewRace}
         onOpenExplorer={() => setShowExplorer(true)}
         onOpenTeacher={() => setShowTeacher(true)}
@@ -547,6 +558,11 @@ export default function LandformRacersPage() {
               activeZone={dominantZone}
               hintZone={hintZone}
               allowOrbit={false}
+              cameraMode={cameraMode}
+              onSelectZone={(zoneId) => {
+                setExplorerZone(zoneId);
+                setShowExplorer(true);
+              }}
             />
           ) : (
             <TopographicMapView blueTeam={blueTeam} orangeTeam={orangeTeam} />

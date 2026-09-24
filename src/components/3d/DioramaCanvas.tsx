@@ -14,6 +14,8 @@ interface DioramaCanvasProps {
   activeZone: LandformZone;
   hintZone: LandformZone | null;
   allowOrbit: boolean;
+  cameraMode?: 'overview' | 'chase';
+  onSelectZone?: (zone: LandformZone) => void;
 }
 
 export const DioramaCanvas: React.FC<DioramaCanvasProps> = ({
@@ -21,9 +23,23 @@ export const DioramaCanvas: React.FC<DioramaCanvasProps> = ({
   orangeTeam,
   activeZone,
   hintZone,
-  allowOrbit
+  allowOrbit,
+  cameraMode = 'overview',
+  onSelectZone
 }) => {
   const { blueCurve, orangeCurve } = useMemo(() => getTeamCurves(), []);
+
+  // Compute lead vehicle position and tangent for chase camera
+  const { leadPosition, leadTangent } = useMemo(() => {
+    const isBlueLeading = blueTeam.checkpoint >= orangeTeam.checkpoint;
+    const leadCp = isBlueLeading ? blueTeam.checkpoint : orangeTeam.checkpoint;
+    const curve = isBlueLeading ? blueCurve : orangeCurve;
+    const t = Math.min(0.999, Math.max(0.001, leadCp / 15));
+    return {
+      leadPosition: curve.getPointAt(t),
+      leadTangent: curve.getTangentAt(t)
+    };
+  }, [blueTeam.checkpoint, orangeTeam.checkpoint, blueCurve, orangeCurve]);
 
   return (
     <div className="w-full h-full relative select-none rounded-3xl overflow-hidden bg-gradient-to-b from-sky-100/70 via-sky-50/50 to-amber-50/30">
@@ -39,9 +55,15 @@ export const DioramaCanvas: React.FC<DioramaCanvasProps> = ({
             activeZone={activeZone}
             hintZone={hintZone}
             allowOrbit={allowOrbit}
+            cameraMode={cameraMode}
+            leadPosition={leadPosition}
+            leadTangent={leadTangent}
           />
 
-          <TerrainWorld highlightZone={hintZone} />
+          <TerrainWorld
+            highlightZone={hintZone}
+            onSelectZone={onSelectZone}
+          />
 
           <RacePath
             blueCurve={blueCurve}

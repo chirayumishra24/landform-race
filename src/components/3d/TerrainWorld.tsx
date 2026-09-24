@@ -6,13 +6,30 @@ import { LandformZone } from '@/types/game';
 
 interface TerrainWorldProps {
   highlightZone: LandformZone | null;
+  onSelectZone?: (zone: LandformZone) => void;
 }
 
-export const TerrainWorld: React.FC<TerrainWorldProps> = ({ highlightZone }) => {
+export const TerrainWorld: React.FC<TerrainWorldProps> = ({ highlightZone, onSelectZone }) => {
   const waterMeshRef = useRef<THREE.Mesh>(null);
   const waterfallRef = useRef<THREE.Mesh>(null);
   const foamRef = useRef<THREE.Group>(null);
   const cloudsRef = useRef<THREE.Group>(null);
+  const windmillRotorRef = useRef<THREE.Group>(null);
+  const snowRef = useRef<THREE.Points>(null);
+
+  // Generate summit snow particles
+  const snowGeometry = useMemo(() => {
+    const count = 35;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = -2.8 + (Math.random() - 0.5) * 5.5;
+      positions[i * 3 + 1] = 4.2 + Math.random() * 3.5;
+      positions[i * 3 + 2] = -8.8 + (Math.random() - 0.5) * 4.5;
+    }
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    return geom;
+  }, []);
 
   useFrame(({ clock }, delta) => {
     const t = clock.getElapsedTime();
@@ -51,6 +68,22 @@ export const TerrainWorld: React.FC<TerrainWorldProps> = ({ highlightZone }) => 
     if (foamRef.current) {
       foamRef.current.rotation.z += delta * 1.8;
       foamRef.current.scale.setScalar(0.9 + Math.sin(t * 7) * 0.15);
+    }
+
+    // 5. Plains windmill rotation
+    if (windmillRotorRef.current) {
+      windmillRotorRef.current.rotation.z += delta * 2.2;
+    }
+
+    // 6. Summit snow flurries downward drift
+    if (snowRef.current) {
+      const pos = snowRef.current.geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        let y = pos.getY(i) - delta * 0.7;
+        if (y < 4.0) y = 7.5;
+        pos.setY(i, y);
+      }
+      pos.needsUpdate = true;
     }
   });
   // Generate terrain heightmap plane
@@ -386,45 +419,103 @@ export const TerrainWorld: React.FC<TerrainWorldProps> = ({ highlightZone }) => 
         </Html>
       </group>
 
-      {/* 3D Floating Zone Landmark Labels (matching screenshot layout) */}
+      {/* Summit Snow Flurries Particle Cloud */}
+      <points ref={snowRef} geometry={snowGeometry}>
+        <pointsMaterial
+          color="#ffffff"
+          size={0.07}
+          transparent
+          opacity={0.85}
+          depthWrite={false}
+        />
+      </points>
+
+      {/* 3D Farmland Windmill in Plains */}
+      <group position={[-4.2, 0.52, 5.8]}>
+        {/* Stone / Timber Tower Base */}
+        <mesh position={[0, 0.7, 0]} castShadow>
+          <cylinderGeometry args={[0.22, 0.36, 1.4, 8]} />
+          <meshStandardMaterial color="#f1f5f9" roughness={0.7} />
+        </mesh>
+        {/* Conical Roof Cap */}
+        <mesh position={[0, 1.5, 0]}>
+          <coneGeometry args={[0.26, 0.3, 8]} />
+          <meshStandardMaterial color="#b91c1c" roughness={0.6} />
+        </mesh>
+        {/* Rotor Hub & 4 Spinning Blades */}
+        <group ref={windmillRotorRef} position={[0, 1.35, 0.24]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.07, 0.07, 0.08, 8]} />
+            <meshStandardMaterial color="#334155" />
+          </mesh>
+          {/* Vertical Blade */}
+          <mesh position={[0, 0, 0.02]}>
+            <boxGeometry args={[0.07, 1.3, 0.015]} />
+            <meshStandardMaterial color="#fed7aa" />
+          </mesh>
+          {/* Horizontal Blade */}
+          <mesh position={[0, 0, 0.02]}>
+            <boxGeometry args={[1.3, 0.07, 0.015]} />
+            <meshStandardMaterial color="#fed7aa" />
+          </mesh>
+        </group>
+      </group>
+
+      {/* 3D Floating Zone Landmark Labels (Clickable for Educational Exploration) */}
       <Html position={[-0.5, 4.4, -6.8]} center distanceFactor={15}>
-        <div className={`px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide shadow-md transition-all duration-300 pointer-events-none select-none border ${
-          highlightZone === 'mountains' 
-            ? 'bg-sky-500 text-white border-white scale-125 shadow-sky-500/50' 
-            : 'bg-white/90 text-slate-800 border-slate-200'
-        }`}>
-          MOUNTAINS
-        </div>
+        <button
+          onClick={() => onSelectZone?.('mountains')}
+          title="Click to explore Mountains"
+          className={`px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wide shadow-lg transition-all duration-300 pointer-events-auto cursor-pointer border select-none hover:scale-110 active:scale-95 ${
+            highlightZone === 'mountains' 
+              ? 'bg-sky-500 text-white border-white scale-125 shadow-sky-500/50 ring-2 ring-white' 
+              : 'bg-white/95 text-slate-800 border-slate-200/90 hover:bg-sky-50 hover:text-sky-700'
+          }`}
+        >
+          🏔️ MOUNTAINS
+        </button>
       </Html>
 
       <Html position={[-0.8, 2.2, -3.2]} center distanceFactor={15}>
-        <div className={`px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide shadow-md transition-all duration-300 pointer-events-none select-none border ${
-          highlightZone === 'valley' 
-            ? 'bg-emerald-500 text-white border-white scale-125 shadow-emerald-500/50' 
-            : 'bg-white/90 text-slate-800 border-slate-200'
-        }`}>
-          VALLEY
-        </div>
+        <button
+          onClick={() => onSelectZone?.('valley')}
+          title="Click to explore Valley"
+          className={`px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wide shadow-lg transition-all duration-300 pointer-events-auto cursor-pointer border select-none hover:scale-110 active:scale-95 ${
+            highlightZone === 'valley' 
+              ? 'bg-emerald-500 text-white border-white scale-125 shadow-emerald-500/50 ring-2 ring-white' 
+              : 'bg-white/95 text-slate-800 border-slate-200/90 hover:bg-emerald-50 hover:text-emerald-700'
+          }`}
+        >
+          🏞️ VALLEY
+        </button>
       </Html>
 
       <Html position={[3.8, 2.9, 1.5]} center distanceFactor={15}>
-        <div className={`px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide shadow-md transition-all duration-300 pointer-events-none select-none border ${
-          highlightZone === 'plateau' 
-            ? 'bg-amber-500 text-white border-white scale-125 shadow-amber-500/50' 
-            : 'bg-white/90 text-slate-800 border-slate-200'
-        }`}>
-          PLATEAU
-        </div>
+        <button
+          onClick={() => onSelectZone?.('plateau')}
+          title="Click to explore Plateau"
+          className={`px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wide shadow-lg transition-all duration-300 pointer-events-auto cursor-pointer border select-none hover:scale-110 active:scale-95 ${
+            highlightZone === 'plateau' 
+              ? 'bg-amber-500 text-white border-white scale-125 shadow-amber-500/50 ring-2 ring-white' 
+              : 'bg-white/95 text-slate-800 border-slate-200/90 hover:bg-amber-50 hover:text-amber-700'
+          }`}
+        >
+          🏜️ PLATEAU
+        </button>
       </Html>
 
       <Html position={[0.2, 1.2, 5.6]} center distanceFactor={15}>
-        <div className={`px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide shadow-md transition-all duration-300 pointer-events-none select-none border ${
-          highlightZone === 'plains' 
-            ? 'bg-lime-600 text-white border-white scale-125 shadow-lime-600/50' 
-            : 'bg-white/90 text-slate-800 border-slate-200'
-        }`}>
-          PLAINS
-        </div>
+        <button
+          onClick={() => onSelectZone?.('plains')}
+          title="Click to explore Plains"
+          className={`px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wide shadow-lg transition-all duration-300 pointer-events-auto cursor-pointer border select-none hover:scale-110 active:scale-95 ${
+            highlightZone === 'plains' 
+              ? 'bg-lime-600 text-white border-white scale-125 shadow-lime-600/50 ring-2 ring-white' 
+              : 'bg-white/95 text-slate-800 border-slate-200/90 hover:bg-lime-50 hover:text-lime-700'
+          }`}
+        >
+          🌾 PLAINS
+        </button>
       </Html>
     </group>
   );
