@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { LandformZone } from '@/types/game';
 
@@ -8,6 +9,50 @@ interface TerrainWorldProps {
 }
 
 export const TerrainWorld: React.FC<TerrainWorldProps> = ({ highlightZone }) => {
+  const waterMeshRef = useRef<THREE.Mesh>(null);
+  const waterfallRef = useRef<THREE.Mesh>(null);
+  const foamRef = useRef<THREE.Group>(null);
+  const cloudsRef = useRef<THREE.Group>(null);
+
+  useFrame(({ clock }, delta) => {
+    const t = clock.getElapsedTime();
+
+    // 1. Dynamic river water ripple animation
+    if (waterMeshRef.current) {
+      const geom = waterMeshRef.current.geometry;
+      const pos = geom.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const u = pos.getX(i);
+        const v = pos.getY(i);
+        pos.setZ(i, Math.sin(u * 1.3 + t * 2.4) * 0.04 + Math.cos(v * 1.6 + t * 3.0) * 0.035);
+      }
+      pos.needsUpdate = true;
+    }
+
+    // 2. Waterfall cascade shimmer
+    if (waterfallRef.current) {
+      const mat = waterfallRef.current.material as THREE.MeshStandardMaterial;
+      if (mat) {
+        mat.opacity = 0.82 + Math.sin(t * 9) * 0.12;
+      }
+    }
+
+    // 3. Drifting atmospheric clouds
+    if (cloudsRef.current) {
+      cloudsRef.current.children.forEach((cloud, idx) => {
+        cloud.position.x += delta * (0.25 + idx * 0.08);
+        if (cloud.position.x > 15) {
+          cloud.position.x = -15;
+        }
+      });
+    }
+
+    // 4. Waterfall base foam bubbling
+    if (foamRef.current) {
+      foamRef.current.rotation.z += delta * 1.8;
+      foamRef.current.scale.setScalar(0.9 + Math.sin(t * 7) * 0.15);
+    }
+  });
   // Generate terrain heightmap plane
   const { terrainGeometry, terrainColors } = useMemo(() => {
     const width = 30;
@@ -166,29 +211,70 @@ export const TerrainWorld: React.FC<TerrainWorldProps> = ({ highlightZone }) => 
         />
       </mesh>
 
-      {/* Water layer in riverbed */}
-      <mesh position={[1.0, 0.28, 2.5]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[18, 24]} />
+      {/* Animated Water layer in riverbed */}
+      <mesh
+        ref={waterMeshRef}
+        position={[1.0, 0.28, 2.5]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
+        <planeGeometry args={[18, 24, 24, 24]} />
         <meshStandardMaterial
           color="#0284c7"
-          roughness={0.15}
-          metalness={0.65}
+          roughness={0.12}
+          metalness={0.7}
           transparent
-          opacity={0.78}
+          opacity={0.82}
         />
       </mesh>
 
-      {/* Waterfall stream plane descending into valley */}
-      <mesh position={[-1.6, 1.8, -2.6]} rotation={[0.4, 0.3, 0]}>
-        <planeGeometry args={[0.9, 1.6]} />
+      {/* Animated Waterfall stream plane descending into valley */}
+      <mesh
+        ref={waterfallRef}
+        position={[-1.6, 1.8, -2.6]}
+        rotation={[0.4, 0.3, 0]}
+      >
+        <planeGeometry args={[0.9, 1.6, 8, 8]} />
         <meshStandardMaterial
           color="#e0f2fe"
-          roughness={0.1}
-          metalness={0.8}
+          roughness={0.08}
+          metalness={0.85}
           transparent
           opacity={0.88}
         />
       </mesh>
+
+      {/* Waterfall Base Splash Foam */}
+      <group ref={foamRef} position={[-1.5, 0.45, -2.1]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.15, 0.6, 16]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.7} />
+        </mesh>
+      </group>
+
+      {/* Drifting Atmospheric Clouds */}
+      <group ref={cloudsRef}>
+        {[
+          [-6, 7.2, -7, 1.1],
+          [2, 8.0, -4, 1.3],
+          [-3, 6.6, 2, 0.9],
+          [5, 6.8, 6, 1.2],
+        ].map(([cx, cy, cz, cs], i) => (
+          <group key={`cloud-${i}`} position={[cx, cy, cz]} scale={[cs, cs * 0.55, cs]}>
+            <mesh position={[0, 0, 0]}>
+              <sphereGeometry args={[0.65, 8, 8]} />
+              <meshStandardMaterial color="#ffffff" transparent opacity={0.8} roughness={0.9} />
+            </mesh>
+            <mesh position={[0.45, 0.08, 0]}>
+              <sphereGeometry args={[0.5, 8, 8]} />
+              <meshStandardMaterial color="#ffffff" transparent opacity={0.8} roughness={0.9} />
+            </mesh>
+            <mesh position={[-0.45, -0.04, 0.1]}>
+              <sphereGeometry args={[0.48, 8, 8]} />
+              <meshStandardMaterial color="#ffffff" transparent opacity={0.8} roughness={0.9} />
+            </mesh>
+          </group>
+        ))}
+      </group>
 
       {/* Stone Bridge crossing river */}
       <group position={[2.5, 0.45, 9.5]} rotation={[0, -0.4, 0]}>

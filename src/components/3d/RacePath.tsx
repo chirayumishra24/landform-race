@@ -41,10 +41,123 @@ export const RacePath: React.FC<RacePathProps> = ({
     return line;
   }, [trailGeometry]);
 
+  // Landmark Transition Arch Gate configurations
+  const archCheckpoints = useMemo(() => {
+    const archIds = [4, 7, 10, 13];
+    return archIds.map((id) => {
+      const idx = BASE_CHECKPOINTS.findIndex((cp) => cp.id === id);
+      const cp = BASE_CHECKPOINTS[idx];
+      const prev = BASE_CHECKPOINTS[idx - 1].position;
+      const next = BASE_CHECKPOINTS[idx + 1].position;
+      const dir = next.clone().sub(prev).normalize();
+      const angle = Math.atan2(dir.x, dir.z);
+
+      return {
+        id,
+        name: cp.name,
+        zone: cp.zone,
+        position: cp.position,
+        angle
+      };
+    });
+  }, []);
+
   return (
     <group>
       {/* Dashed white/luminous trail line matching screenshot */}
       <primitive object={lineObject} />
+
+      {/* 3D Milestone Checkpoint Arches at Landform Transitions */}
+      {archCheckpoints.map((arch) => {
+        const isReachedByBlue = blueCheckpoint >= arch.id;
+        const isReachedByOrange = orangeCheckpoint >= arch.id;
+        const isCurrent = blueCheckpoint === arch.id || orangeCheckpoint === arch.id;
+
+        const archColor =
+          isReachedByBlue && isReachedByOrange
+            ? '#a855f7'
+            : isReachedByBlue
+            ? '#0284c7'
+            : isReachedByOrange
+            ? '#ea580c'
+            : '#475569';
+
+        const glowColor =
+          isReachedByBlue && isReachedByOrange
+            ? '#d8b4fe'
+            : isReachedByBlue
+            ? '#38bdf8'
+            : isReachedByOrange
+            ? '#fb923c'
+            : '#94a3b8';
+
+        return (
+          <group
+            key={`arch-${arch.id}`}
+            position={[arch.position.x, arch.position.y + 0.05, arch.position.z]}
+            rotation={[0, arch.angle, 0]}
+          >
+            {/* Left structural pillar */}
+            <mesh position={[-0.85, 0.65, 0]} castShadow>
+              <cylinderGeometry args={[0.04, 0.06, 1.3, 10]} />
+              <meshStandardMaterial color="#1e293b" metalness={0.7} />
+            </mesh>
+            {/* Left base footer */}
+            <mesh position={[-0.85, 0.05, 0]}>
+              <boxGeometry args={[0.18, 0.1, 0.18]} />
+              <meshStandardMaterial color="#475569" />
+            </mesh>
+
+            {/* Right structural pillar */}
+            <mesh position={[0.85, 0.65, 0]} castShadow>
+              <cylinderGeometry args={[0.04, 0.06, 1.3, 10]} />
+              <meshStandardMaterial color="#1e293b" metalness={0.7} />
+            </mesh>
+            {/* Right base footer */}
+            <mesh position={[0.85, 0.05, 0]}>
+              <boxGeometry args={[0.18, 0.1, 0.18]} />
+              <meshStandardMaterial color="#475569" />
+            </mesh>
+
+            {/* Overhead Crossbar Truss */}
+            <mesh position={[0, 1.32, 0]} castShadow>
+              <boxGeometry args={[1.82, 0.12, 0.08]} />
+              <meshStandardMaterial color="#0f172a" metalness={0.8} />
+            </mesh>
+
+            {/* Glowing Neon Crossbeam strip */}
+            <mesh position={[0, 1.32, 0.045]}>
+              <boxGeometry args={[1.74, 0.04, 0.015]} />
+              <meshBasicMaterial color={glowColor} />
+            </mesh>
+
+            {/* Milestone Circular Badge on Overhead Truss */}
+            <mesh position={[0, 1.32, 0.06]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.16, 0.16, 0.02, 16]} />
+              <meshStandardMaterial color={archColor} roughness={0.3} />
+            </mesh>
+
+            {/* Floating zone indicator tag */}
+            <Html position={[0, 1.75, 0]} center distanceFactor={14}>
+              <div
+                className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider whitespace-nowrap shadow-md pointer-events-none select-none border transition-transform duration-300 ${
+                  isCurrent
+                    ? 'bg-amber-400 text-slate-900 border-white scale-110 ring-2 ring-amber-300'
+                    : isReachedByBlue && isReachedByOrange
+                    ? 'bg-purple-600 text-white border-purple-300'
+                    : isReachedByBlue
+                    ? 'bg-sky-600 text-white border-sky-300'
+                    : isReachedByOrange
+                    ? 'bg-orange-600 text-white border-orange-300'
+                    : 'bg-slate-800/90 text-slate-300 border-slate-600'
+                }`}
+              >
+                {arch.name}
+              </div>
+            </Html>
+          </group>
+        );
+      })}
 
       {/* Checkpoint nodes (1 through 15) */}
       {BASE_CHECKPOINTS.map((cp) => {
